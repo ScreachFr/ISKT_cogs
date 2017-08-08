@@ -6,8 +6,8 @@ class ISKT:
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.command(pass_context=True)
-    async def canRead(self, ctx, chan : discord.Channel = None ):
+    @commands.command(pass_context=True, no_pm=True)
+    async def canRead(self, ctx, chan : discord.Channel = None):
         result = ""
         server = ctx.message.server
         
@@ -24,9 +24,21 @@ class ISKT:
 
         result += "**__List of users who can access " + channel.mention + " : __**\n"
 
+        resultList = list()
+        
+
         for m in members:
             if channel.permissions_for(m).read_messages :
-                result += m.name + "#" + m.discriminator + "\n"
+                tmp = ""
+                if m.nick is not None: # Add server nickname first 
+                    tmp += m.nick + " : " 
+                tmp += m.name + "#" + m.discriminator + "\n"
+                resultList.append(tmp)
+
+        resultList.sort() # Sort result 
+
+        for e in resultList:
+            result += e
 
         await self.bot.say(result)
 
