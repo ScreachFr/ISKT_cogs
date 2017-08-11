@@ -104,10 +104,17 @@ class ISKT:
     # isAWelcome = welcome
     # !isAWelcome = goodbye
     async def introduce(self, e, channel : discord.Channel, isAWelcome : bool):
+        if isinstance(e, discord.Role): # Role
+            prefix = ":regional_indicator_r: "
+        elif isinstance(e, discord.Member): # User
+            prefix = ":regional_indicator_m: "
+        else: # Other
+            prefix = ":regional_indicator_o: "
+
         if isAWelcome:
-            message = e.mention + " has now access to this channel."
+            message = prefix + ":green_heart: " + e.mention + " has now access to this channel."
         else: 
-           message = e.mention + " cannot access this channel anymore." 
+            message = prefix + ":red_circle: " + e.mention + " cannot access this channel anymore." 
 
         await self.bot.send_message(channel, message)
 
