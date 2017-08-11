@@ -47,7 +47,23 @@ class ISKT:
     @commands.command(pass_context=True, no_pm=True)
     async def testLog(self, ctx, toLog : str):
         await self.log(toLog, ctx.message.server)
+	
+	@commands.command(pass_context=True, no_pm=True)
+    async def add(self, ctx, member : discord.Member, channel : discord.Channel = None):
+        await self.changeCanRead(ctx, member, channel, True)
 
+    @commands.command(pass_context=True, no_pm=True)
+    async def remove(self, ctx, member : discord.Member, channel : discord.Channel = None): 
+        await self.changeCanRead(ctx, member, channel, False)        
+
+    async def changeCanRead(self, ctx, member : discord.Member, channel : discord.Channel, newRule : bool):
+        if channel is None:
+            channel = ctx.message.channel
+        
+        permission = discord.PermissionOverwrite()
+        permission.update(read_messages = newRule)
+        await self.bot.edit_channel_permissions(channel, member, permission)
+        await self.bot.say(ctx.message.author.mention + " done.")
 
     async def matchChannelNotifier(self, before : discord.Channel, after : discord.Channel):
         before_canRead = list(filter((lambda e: e[1].read_messages), before.overwrites))
