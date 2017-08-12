@@ -10,6 +10,7 @@ class ISKT:
 
     @commands.command(pass_context=True, no_pm=True)
     async def canRead(self, ctx, chan : discord.Channel = None):
+        """Shows members who can access a channel"""
         result = ""
         server = ctx.message.server
         
@@ -34,7 +35,7 @@ class ISKT:
                 tmp = ""
                 if m.nick is not None: # Add server nickname first 
                     tmp += m.nick + " : " 
-                tmp += m.name + "#" + m.discriminator + "\n"
+                tmp += m.name + "\n"
                 resultList.append(tmp)
 
         resultList.sort() # Sort result 
@@ -44,16 +45,19 @@ class ISKT:
 
         await self.bot.say(result)
 
+    
     @commands.command(pass_context=True, no_pm=True)
     async def testLog(self, ctx, toLog : str):
         await self.log(toLog, ctx.message.server)
-	
-	@commands.command(pass_context=True, no_pm=True)
+
+    @commands.command(pass_context=True, no_pm=True)
     async def add(self, ctx, member : discord.Member, channel : discord.Channel = None):
+        """Adds a "read_permissions" overwrite to a channel """
         await self.changeCanRead(ctx, member, channel, True)
 
     @commands.command(pass_context=True, no_pm=True)
     async def remove(self, ctx, member : discord.Member, channel : discord.Channel = None): 
+        """Removes a "read_permissions" overwrite to a channel """
         await self.changeCanRead(ctx, member, channel, False)        
 
     async def changeCanRead(self, ctx, member : discord.Member, channel : discord.Channel, newRule : bool):
@@ -64,6 +68,7 @@ class ISKT:
         permission.update(read_messages = newRule)
         await self.bot.edit_channel_permissions(channel, member, permission)
         await self.bot.say(ctx.message.author.mention + " done.")
+
 
     async def matchChannelNotifier(self, before : discord.Channel, after : discord.Channel):
         before_canRead = list(filter((lambda e: e[1].read_messages), before.overwrites))
