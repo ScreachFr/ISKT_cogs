@@ -45,7 +45,45 @@ class ISKT:
 
         await self.bot.say(result)
 
+        
+        
+    @commands.command(pass_context=True, no_pm=True)
+    async def printStaffDirectory(self, ctx):
     
+        members = ctx.message.server.members
+        
+        staff_directory = {'Managers':[], 'Officials':[], 'Casters':[],'Developers':[]}
+        
+        for m in members:
+            roles = [r.name for r in m.roles]
+            if 'Tournament Manager' in roles:
+                staff_directory['Managers'].append(m)
+            if 'Official' in roles:
+                staff_directory['Officials'].append(m)
+            if 'Lead Caster' in roles:
+                staff_directory['Casters'].append(m)
+            if 'Developer' in roles:
+                staff_directory['Developers'].append(m)
+                
+        manager_substr = ""
+        official_substr = ""
+        caster_substr = ""
+        developer_substr = ""
+        
+        for manager in staff_directory['Managers']:
+            manager_substr += "- " + manager.mention + "\n"
+        for official in staff_directory['Officials']:
+            official_substr += "- " + official.mention + "\n"
+        for caster in staff_directory['Casters']:
+            caster_substr += "- " + caster.mention + "\n"      
+        for developer in staff_directory['Developers']:
+            developer_substr += "- " + developer.mention + "\n"    
+            
+        s = '''__**ISKT 2 Staff**__\n\n\n**Admins**:\n{}\n\n**Officials**:\n{}\n\n**Lead Caster**:\n{}\n\n**Developers**:\n{}\n\n'''.format(manager_substr, official_substr,caster_substr,developer_substr)
+        
+        await self.bot.say(s)
+        
+        
     @commands.command(pass_context=True, no_pm=True)
     async def testLog(self, ctx, toLog : str):
         await self.log(toLog, ctx.message.server)
@@ -139,7 +177,6 @@ class ISKT:
         for c in server.channels: # TODO there must be a kind of list.get(str) in python to simplify this function.
             if c.name == name:
                 return c
-
         return None
 
     # a/b
@@ -161,4 +198,3 @@ class ISKT:
 
 def setup(bot):
     bot.add_cog(ISKT(bot))
-
