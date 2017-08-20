@@ -69,3 +69,16 @@ Only on match channels (if the channel name begins with `[a-z][0-9]_` :nerd:).
 
 Cobalt will send a message every time a member or a role gains or loses read permission.
 
+#### Automatic directory update
+
+Cobalt will automatically update the staff directory every time it detects a member gaining or losing the following roles : 
+
++ Tournament Manager
++ Staff
++ Official
++ Lead Caster
++ Caster
++ Developer
++ EU Referee
++ NA Referee
++ AU Referee
