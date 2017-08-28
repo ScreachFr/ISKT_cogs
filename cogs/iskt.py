@@ -6,6 +6,8 @@ from discord.ext import commands
 from enum import Enum
 
 class DBMApper:
+    RETRY = 5
+
     def __init__(self, host, port, database, login, password):
         self.host = host
         self.port = port
@@ -16,23 +18,25 @@ class DBMApper:
         self.con = None
 
     def getConnection(self):
-        if self.con is None:
-            self.con = mdb.connect(host=self.host, port=self.port,db=self.database, user=self.login, passwd=self.password)
+        self.con = mdb.connect(host=self.host, port=self.port,db=self.database, user=self.login, passwd=self.password)
         return self.con
 
 
     def executeQuery(self, query, *args):
         
-        try:
-            db = self.getConnection()            
-            cur = db.cursor()
-            cur.execute(query, args)
-            
-            db.commit()
+        for i in range(0, self.RETRY):
+            try:
+                db = self.getConnection()            
+                cur = db.cursor()
+                cur.execute(query, args)
+                
+                db.commit()
 
-            return cur
-        except mdb.Error as e:
-            print("Error : " + str(e))
+                return cur
+            except mdb.Error as e:
+                print("Error : " + str(e))
+
+        return None
 
     def select(self, query, *args):
         try:
@@ -77,6 +81,7 @@ class ISKT:
     
     CFG_PATH = "cogs/iskt_config.json"
     
+    CONFIRMATION = "Done.:ok_hand:"
 
     def __init__(self, bot):
         self.bot = bot
@@ -93,7 +98,7 @@ class ISKT:
 
     @commands.command(pass_context=True, no_pm=True)
     async def canRead(self, ctx, chan : discord.Channel = None):
-        """Shows members who can access a channel"""
+        """Shows members who can access a channel."""
         result = ""
         server = ctx.message.server
         
@@ -135,36 +140,36 @@ class ISKT:
 
     @commands.command(pass_context=True, no_pm=True)
     async def add(self, ctx, member : discord.Member, channel : discord.Channel = None):
-        """Adds a "read_permissions" overwrite to a channel """
+        """Adds a "read_permissions" overwrite to a channel. Cobalt needs "Manage Permissions" in order to perform this operation."""
         await self.changeCanRead(ctx, member, channel, True)
 
     @commands.command(pass_context=True, no_pm=True)
     async def remove(self, ctx, member : discord.Member, channel : discord.Channel = None): 
-        """Removes a "read_permissions" overwrite to a channel """
+        """Removes a "read_permissions" overwrite to a channel. Cobalt needs "Manage Permissions" in order to perform this operation."""
         await self.changeCanRead(ctx, member, channel, False)        
 
-    @commands.command()
-    async def setSteamID(self, user : discord.User, steamID : str):
+    @commands.command(pass_context=True)
+    async def setSteamID(self, ctx, user : discord.User, steamID : str):
         """Links a Steam ID to an User."""
         self.updateUserInDB(user, steamID, "")
-        await self.bot.say("Done.")
+        await self.bot.add_reaction(ctx.message, "\N{OK HAND SIGN}")
 
-    @commands.command()
-    async def setStreamURL(self, user : discord.User, streamURL : str):
+    @commands.command(pass_context=True)
+    async def setStreamURL(self, ctx, user : discord.User, streamURL : str):
         """Links a stream URL to an User."""
         self.updateUserInDB(user, "", streamURL)
-        await self.bot.say("Done.")
+        await self.bot.add_reaction(ctx.message, "\N{OK HAND SIGN}")
 
-    @commands.command()
-    async def setInfo(self, user : discord.User, steamID : str = "",  streamURL : str = ""):
+    @commands.command(pass_context=True)
+    async def setInfo(self, ctx, user : discord.User, steamID : str = "",  streamURL : str = ""):
         """Links a Steam ID and a stream URL to an User."""
         self.updateUserInDB(user, steamID, streamURL)
-        await self.bot.say("Done.")
+        await self.bot.add_reaction(ctx.message, "\N{OK HAND SIGN}")
 
     @commands.command(pass_context=True, no_pm=True)
     async def refreshDirectories(self, ctx):
         await self.refreshStaffDirectory(ctx.message.server, True)
-        await self.bot.say("Done.")
+        await self.bot.add_reaction(ctx.message, "\N{OK HAND SIGN}")
 
     async def changeCanRead(self, ctx, member : discord.Member, channel : discord.Channel, newRule : bool):
         if channel is None:
@@ -173,7 +178,7 @@ class ISKT:
         permission = discord.PermissionOverwrite()
         permission.update(read_messages = newRule)
         await self.bot.edit_channel_permissions(channel, member, permission)
-        await self.bot.say(ctx.message.author.mention + " done.")
+        await self.bot.say(ctx.message.author.mention + self.CONFIRMATION)
 
 
     async def matchChannelNotifier(self, before : discord.Channel, after : discord.Channel):
@@ -186,11 +191,11 @@ class ISKT:
         updates = list()
         
         for t in before_canRead:
-            if not ISKT.hasKey(after_canRead, t[0]):
+            if not ISKT.hasKey(after_canRead, t[0]) and t not in updates:
                 updates.append(t)
         for t in before_cannotRead:
-            if not ISKT.hasKey(after_cannotRead, t[0]):
-                updates.append(t)        
+            if not ISKT.hasKey(after_cannotRead, t[0]) and t not in updates:
+                    updates.append(t)        
 
         for t in updates:
             if isinstance(t[0], discord.Member):
@@ -291,17 +296,22 @@ class ISKT:
         # Managers
         result += "**Tournament Managers:**\n"
         result += self.getMemberListByRole(members, 'Tournament Manager', False, False) + "\n\n"
+        
+        #Commitee
+        result += "**Commitee:**\n"
+        result += self.getMemberListByRole(members, 'Committee', False, False) + "\n\n"
+
         # Officials
         result += "**Officials:**\n"
         result += self.getMemberListByRole(members, 'Official', False, False) + "\n\n"
-        # Lead Caster
-        result += "**Lead Caster:**\n"
-        result += self.getMemberListByRole(members, 'Lead Caster', False, False) + "\n\n"
+
         # Developers
         result += "**Developers:**\n"
         result += self.getMemberListByRole(members, 'Developer', False, False) + "\n\n"
+
         # Adviser
-        # XXX No adviser role it seems.
+        result += "**Advisers:**\n"
+        result += self.getMemberListByRole(members, 'Adviser', False, False) + "\n\n"
 
         returnValue.append(result) # Lets hope python's string aren't mutable :^)
         result = ""
@@ -319,11 +329,11 @@ class ISKT:
 
         result += "__**OFFICIAL ISKT 2 REFEREES**__\n\n\n"
         result += "**EU-based**\n"
-        result += self.getMemberListByRole(members, 'EU Referee', True, False) + "\n\n"
+        result += self.getMemberListByRole(members, 'EU Ref', True, False) + "\n\n"
         result += "**NA-based**\n"
-        result += self.getMemberListByRole(members, 'NA Referee', True, False) + "\n\n"
+        result += self.getMemberListByRole(members, 'NA Ref', True, False) + "\n\n"
         result += "**OC-based**\n"
-        result += self.getMemberListByRole(members, 'AU Referee', True, False) + "\n\n"
+        result += self.getMemberListByRole(members, 'OC Ref', True, False) + "\n\n"
         
         returnValue.append(result) # Lets hope python's string aren't mutable :^)
         
@@ -359,17 +369,22 @@ class ISKT:
         self.db.executeQuery(self.QUERY_UPDATE_MEMBER_BY_D_ID, steamID, streamURL, user.id)
     
     def getUser(self, user : discord.User):
-        cur = self.db.select(self.QUERY_SELECT_MEMBER_BY_D_ID, user.id)
-        if cur is None:
-            print("cur is none")
-            return None
-        
-        row = cur.fetchone()
+        try:
+            cur = self.db.select(self.QUERY_SELECT_MEMBER_BY_D_ID, user.id)
+            if cur is None:
+                print("cur is none")
+                return None
+            
+            row = cur.fetchone()
 
-        if row is None: # No result
+            if row is None: # No result
+                return None
+
+            return (row[1], row[2])
+        except mdb.Error as e:
+            self.log("Database error : " + str(e))
             return None
 
-        return (row[1], row[2])
 
     def getMemberListByRole(self, members : list, role : str, showSteamID : bool, showStreamURL : bool, region : Region = Region.ANY):
         result = ""
